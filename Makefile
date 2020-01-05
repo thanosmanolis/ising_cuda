@@ -9,11 +9,14 @@
 #															#
 #############################################################
 
-# define the C/C++ compiler to use,default here is gcc-7
+# define the C/C++ compiler to use, default here is gcc-7
 CC = gcc-7
 
+# define the CUDA compiler to use
+NVCC = nvcc
+
 # all the executables
-EXECS = test_sequential
+EXECS = test_sequential test_v1
 
 # define flags
 CFLAGS =
@@ -28,9 +31,10 @@ RM = rm -rf
 all: $(EXECS)
 
 test_sequential:
-	cd ising; make lib; cd ..
-	cd ising; cp lib/*.a inc/*.h ../; cd ..
-	$(CC) tester.c ising_sequential.a -o $@ $(CFLAGS) $(LDFLAGS)
+	$(CC) src/ising_sequential.c -o $@ $(CFLAGS) $(LDFLAGS)
+
+test_v1:
+	$(NVCC) src/ising_v1.cu -o $@ $(CFLAGS) $(LDFLAGS)
 
 clean:
-	$(RM) *.h *.a $(EXECS)
+	$(RM) *.h *.a *.o $(EXECS)
