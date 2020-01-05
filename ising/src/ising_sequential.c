@@ -9,9 +9,9 @@
 void ising(int *G, double *w, int k, int n)
 {
 	//! Array to store the updated values
-	int *G_cp = malloc(n*n * sizeof(int));
+	int *G_new = malloc(n*n * sizeof(int));
 
-	//! Temp pointer to swap G and G_cp
+	//! Temp pointer to swap G and G_new
 	int *temp;
 
 	//! Variable to store the value of each moment
@@ -50,21 +50,21 @@ void ising(int *G, double *w, int k, int n)
 				//! If positive -> 1
 				//! If negative -> -1
 				if(sum_value > 1e-3)
-					G_cp[y * n + x] = 1;
+					G_new[y * n + x] = 1;
 				else if(sum_value < -1e-3)
-					G_cp[y * n + x] = -1;
+					G_new[y * n + x] = -1;
 				else
-					G_cp[y * n + x] = G[y * n + x];
+					G_new[y * n + x] = G[y * n + x];
 			}
 
 		//! Swap pointers for next iteration
 		temp = G;
-		G = G_cp;
-		G_cp = temp;
+		G = G_new;
+		G_new = temp;
 	}
 
 	//! At the last iteration, if the k is odd,
-	//! G points to G_cp and G_cp points to G
+	//! G points to G_new and G_new points to G
 	if(k%2 != 0)
-		memcpy(G_cp, G, n*n*sizeof(int));
+		memcpy(G_new, G, n*n*sizeof(int));
 }
