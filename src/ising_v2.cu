@@ -1,8 +1,8 @@
 /*
-****************************************
-*      - Ising model using CUDA -      *
-*    GPU with one thread per moment    *
-****************************************
+**********************************************
+*         - Ising model using CUDA -         *
+*    GPU with multiple moments per thread    *
+**********************************************
 */
 
 #include "../inc/ising.h"
@@ -10,36 +10,48 @@
 struct timeval startwtime, endwtime;
 double p_time;
 
-#define BLOCKSIZE 11
+#define BLOCKSIZE 47
 
-__global__ void kernel(int n, double* gpu_w, int* gpu_G, int* gpu_G_new)
+__global__ void kernel(int n, double* gpu_w, int* gpu_G, int* gpu_G_new, int grid_size)
 {
 	//! Each thread will calculate the value of multiple moments
 	int moments_per_thread = BLOCKSIZE;
 
+	//! Step for the next iteration
+	int step = (n*n)/moments_per_thread;
+
+	//! Thread ID
+	int thread_id = blockIdx.x *blockDim.x + threadIdx.x;
+
 	//! Variable to store the value of each moment
 	double sum_value;
 
+	//! The indices of the examined neighbors
+	int idx_X, idx_Y;
+
 	//! Moment's coordinates
-	// int mom_X = blockIdx.x;
-	// int mom_Y = threadIdx.x*moments_per_thread;
-	int mom_X = (blockIdx.y * blockDim.y + threadIdx.y)*moments_per_thread;
-	int mom_Y = blockIdx.x * blockDim.x + threadIdx.x;
-	int blockId = blockIdx.y * gridDim.x + blockIdx.x;
-	int thread_id = blockId * blockDim.x + threadIdx.x;
+	int mom_X = thread_id%grid_size;
+	int mom_Y = thread_id/grid_size;
 
-	if( (mom_X < n) && (mom_Y < n) )
+	if( thread_id < step )
 	{
-		//! The indices of the examined neighbors
-		int idx_X, idx_Y;
+		int counter = 0;
 
-		for(int i=0; i<moments_per_thread; i++)
+		for(int i=thread_id; i < n*n; i+=step)
 		{
-			if(i>0)
-				mom_X++;
+			counter++;
 
-			if(mom_X >= n)
+			mom_X = i%n;
+			mom_Y = i/n;
+
+			if( (mom_X >= n) || (mom_Y >= n) )
+			{
+				printf(RED "Error 1: mom_X or mom_Y >= n\n" RESET_COLOR);
 				break;
+			}
+
+			// if(is == 1)
+			// 	printf("[%d,%d] %d\n", mom_X, mom_Y, i);
 
 			sum_value = 0;
 
@@ -64,13 +76,16 @@ __global__ void kernel(int n, double* gpu_w, int* gpu_G, int* gpu_G_new)
 		    //! If positive -> 1
 		    //! If negative -> -1
 		    if(sum_value > 1e-3)
-		        gpu_G_new[mom_Y * n + mom_X] = 1;
+		        gpu_G_new[mom_Y*n + mom_X] = 1;
 		    else if(sum_value < -1e-3)
-		        gpu_G_new[mom_Y * n + mom_X] = -1;
+		        gpu_G_new[mom_Y*n + mom_X] = -1;
 		    else
-		        gpu_G_new[mom_Y * n + mom_X] = gpu_G[mom_Y * n + mom_X];
+		        gpu_G_new[mom_Y*n + mom_X] = gpu_G[mom_Y*n + mom_X];
 		}
+		printf("iterations: %d\n", counter);
 	}
+	// else
+	// 	printf(RED "Error 2: mom_X or mom_Y >= n\n" RESET_COLOR);
 }
 
 void ising(int *G, double *w, int k, int n)
@@ -102,16 +117,16 @@ void ising(int *G, double *w, int k, int n)
 
 	printf("threads:%d\n", threads);
 	printf("blocks:%d\n", blocks);
-	printf("%d\n", blocks*blocks*threads - n*n);
+	printf("%d\n", blocks*blocks*threads);
 
 	//! Define block and grid
-	dim3 dimBlock( threads, 1, 1 );
-	dim3 dimGrid ( blocks, blocks, 1 );
+	// dim3 dimBlock( threads, 1, 1 );
+	// dim3 dimGrid ( blocks, blocks, 1 );
 
 	//! Implement the process for k iterations
 	for(int i = 0; i < k; i++)
 	{
-        kernel<<< dimGrid, dimBlock >>>(n, gpu_w, gpu_G, gpu_G_new);
+        kernel<<< blocks*blocks, threads >>>(n, gpu_w, gpu_G, gpu_G_new, blocks);
 
         //! Synchronize threads before swapping pointers
 		cudaDeviceSynchronize();
