@@ -10,7 +10,7 @@
 struct timeval startwtime, endwtime;
 double p_time;
 
-int block_size = 11;
+#define BLOCKSIZE 16
 
 __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
 {
@@ -24,7 +24,7 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
     //! Variable to store the value of each moment
     double sum_value = 0;
 
-	if( (mom_X < 517) && (mom_Y < 517) )
+	if( (mom_X < n) && (mom_Y < n) )
 	{
 		//! Iterate through the moment's neighbors (k->X, l->Y axis)
 	    for(int k=0; k<5; k++)
@@ -74,21 +74,34 @@ void ising(int *G, double *w, int k, int n)
 	//! Temp pointer to swap gpu_G and gpu_G_new
 	int *temp;
 
-	//! Grid size comes from a combination of n and block_size
-	int grid_size;
-	if(n%block_size == 0)
-		grid_size = n/block_size;
+	//! Find a number of threads (per block) that is a divisor of n
+	//! Else, threads (per block) take the default value
+	int threads = 0;
+	for(int i=10; i<=32; i++)
+		if(n%i == 0)
+			threads = i;
+	if(threads == 0)
+		threads = BLOCKSIZE;
+
+	//! Grid size comes from a combination of n and threads
+	int blocks;
+	if(n%threads == 0)
+		blocks = n/threads;
 	else
-		grid_size = n/block_size + 1;
+		blocks = n/threads + 1;
+
+	printf("threads:%d\n", threads);
+	printf("blocks:%d\n", blocks);
+	printf("%d\n", blocks*blocks*threads*threads - n*n);
 
 	//! Define block and grid
-	dim3 dimBlock( block_size, block_size );
-	dim3 dimGrid ( grid_size, grid_size );
+	dim3 dimBlock( threads, threads );
+	dim3 dimGrid ( blocks, blocks );
 
 	//! Implement the process for k iterations
 	for(int i = 0; i < k; i++)
 	{
-        kernel<<< dimGrid, dimBlock>>>(n, gpu_w, gpu_G, gpu_G_new);
+        kernel<<< dimGrid , dimBlock >>>(n, gpu_w, gpu_G, gpu_G_new);
 
         //! Synchronize threads before swapping pointers
 		cudaDeviceSynchronize();
@@ -99,11 +112,6 @@ void ising(int *G, double *w, int k, int n)
 		gpu_G_new = temp;
 	}
 
-    //! At the last iteration, if the k is odd,
-	//! G points to G_new and G_new points to G
-	// if(k%2 != 0)
-	// 	cudaMemcpy(gpu_G_new, gpu_G, n*n*sizeof(int), cudaMemcpyDeviceToDevice);
-
     //! Copy GPU final data to CPU memory
 	cudaMemcpy(G, gpu_G, n*n*sizeof(int), cudaMemcpyDeviceToHost);
 
@@ -113,11 +121,19 @@ void ising(int *G, double *w, int k, int n)
 	cudaFree(gpu_G_new);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-	//! Matrix dimensions (n) and number of iterations (k)
-	int n = 517;
-	int k = 1;
+	int n, k;
+
+    if(argc > 1)
+    {
+        n = atoi(argv[1]);  // # number of elements (n*n)
+        k = atoi(argv[2]);  // # iterations
+    }else
+    {
+		n = 517;	// default value for n
+        k = 1;		// default value for k
+    }
 
 	//! Array that will keep the init binary file info
 	int *G = (int*)malloc(n*n * sizeof(int));
