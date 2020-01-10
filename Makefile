@@ -16,11 +16,11 @@ CC = gcc-7
 NVCC = nvcc
 
 # all the executables
-EXECS = test_sequential test_v1
+EXECS = sequential v1 v2
 
 # define flags
 CFLAGS =
-LDFLAGS =
+CUDAFLAGS =
 
 # define command to remove files
 RM = rm -rf
@@ -30,11 +30,20 @@ RM = rm -rf
 
 all: $(EXECS)
 
-test_sequential:
-	$(CC) src/ising_sequential.c -o $@ $(CFLAGS) $(LDFLAGS)
+sequential:
+	cd ising; make lib; cd ..
+	cd ising; cp lib/*.a inc/*.h ../; cd ..
+	$(CC) main.c ising_sequential.a -o $@ $(CFLAGS)
 
-test_v1:
-	$(NVCC) src/ising_v1.cu -o $@ $(CFLAGS) $(LDFLAGS)
+v1:
+	cd ising; make lib; cd ..
+	cd ising; cp lib/*.a inc/*.h ../; cd ..
+	$(NVCC) main_cuda.cu ising_v1.a -o $@ $(CUDAFLAGS)
+
+v2:
+	cd ising; make lib; cd ..
+	cd ising; cp lib/*.a inc/*.h ../; cd ..
+	$(NVCC) main_cuda.cu ising_v2.a -o $@ $(CUDAFLAGS)
 
 clean:
-	$(RM) *.h *.a *.o $(EXECS)
+	$(RM) *.h *.a ising/src/*.o ising/lib/*.a $(EXECS)
