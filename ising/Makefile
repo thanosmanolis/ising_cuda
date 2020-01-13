@@ -28,9 +28,11 @@ lib:
 	cd src; $(CC) -c ising_sequential.c $(CFLAGS); cd ..
 	cd src; $(NVCC) -c ising_v1.cu $(CUDAFLAGS); cd ..
 	cd src; $(NVCC) -c ising_v2.cu $(CUDAFLAGS); cd ..
+	cd src; $(NVCC) -c ising_v3.cu $(CUDAFLAGS); cd ..
 	cd src; ar rcs ../lib/ising_sequential.a ising_sequential.o; cd ..
 	cd src; ar rcs ../lib/ising_v1.a ising_v1.o; cd ..
 	cd src; ar rcs ../lib/ising_v2.a ising_v2.o; cd ..
+	cd src; ar rcs ../lib/ising_v3.a ising_v3.o; cd ..
 
 clean:
 	$(RM) src/*.o lib/*.a

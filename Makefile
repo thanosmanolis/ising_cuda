@@ -16,7 +16,7 @@ CC = gcc-7
 NVCC = nvcc
 
 # all the executables
-EXECS = sequential v1 v2
+EXECS = sequential v1 v2 v3
 
 # define flags
 CFLAGS =
@@ -44,6 +44,11 @@ v2:
 	cd ising; make lib; cd ..
 	cd ising; cp lib/*.a inc/*.h ../; cd ..
 	$(NVCC) main_cuda.cu ising_v2.a -o $@ $(CUDAFLAGS)
+
+v3:
+	cd ising; make lib; cd ..
+	cd ising; cp lib/*.a inc/*.h ../; cd ..
+	$(NVCC) main_cuda.cu ising_v3.a -o $@ $(CUDAFLAGS)
 
 clean:
 	$(RM) *.h *.a ising/src/*.o ising/lib/*.a $(EXECS)
