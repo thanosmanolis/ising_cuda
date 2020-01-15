@@ -6,9 +6,6 @@
 
 #include "../inc/ising.h"
 
-struct timeval startwtime, endwtime;
-double p_time;
-
 void ising(int *G, double *w, int k, int n)
 {
 	//! Array to store the updated values
@@ -21,43 +18,43 @@ void ising(int *G, double *w, int k, int n)
 	double sum_value = 0;
 
 	//! The indices of the examined neighbors
-	int idx_X, idx_Y;
+	int idx_row, idx_col;
 
 	//! Implement the process for k iterations
 	for(int i = 0; i < k; i++)
 	{
 		//! Access every single moment of the matrix
-		for(int x=0; x<n; x++)
-			for(int y=0; y<n; y++)
+		for(int i=0; i<n; i++)
+			for(int j=0; j<n; j++)
 			{
 				sum_value = 0;
 
-				//! Iterate through the moment's neighbors (k->X, l->Y axis)
-				for(int k=0; k<5; k++)
-					for(int l=0; l<5; l++)
+				//! Iterate through the moment's neighbors (k->row, l->column)
+				for(int k=-2; k<3; k++)
+					for(int l=-2; l<3; l++)
 					{
 						//! Only edit the neighbors of the examined element
-						if((k == 2) && (l == 2))
+						if((k == 0) && (l == 0))
 							continue;
 
 						//! Find the index of the examined neigbor
-						//! If the element is at a special position (i.e. a corner)
-						//! continue to the other side of the matrix
-						idx_X = (x + (k-2) + n) % n;
-						idx_Y = (y + (l-2) + n) % n;
+			            //! If the element is at a special position (i.e. a corner)
+			            //! continue to the other side of the matrix
+						idx_row = (i + k + n) % n;
+			            idx_col = (j + l + n) % n;
 
 						//! Calculate the new value
-						sum_value += w[l*5 + k] * G[idx_Y*n + idx_X];
+						sum_value += w[(2+k)*5 + (2+l)] * G[idx_row*n + idx_col];
 					}
 
 				//! If positive -> 1
 				//! If negative -> -1
 				if(sum_value > 1e-3)
-					G_new[y * n + x] = 1;
+					G_new[i*n + j] = 1;
 				else if(sum_value < -1e-3)
-					G_new[y * n + x] = -1;
+					G_new[i*n + j] = -1;
 				else
-					G_new[y * n + x] = G[y * n + x];
+					G_new[i*n + j] = G[i*n + j];
 			}
 
 		//! Swap pointers for next iteration

@@ -1,13 +1,15 @@
 /*
-****************************************
-*      - Ising model using CUDA -      *
-*    GPU with one thread per moment    *
-****************************************
+**********************************************
+*         - Ising model using CUDA -         *
+*    GPU with multiple moments per thread    *
+*          Using shared GPU memory			 *
+**********************************************
 */
 
 #include "../inc/cuda.h"
 
 //! Define threads per block as a power of 2
+//! TILE_DIM must be an integral multiple of BLOCK_ROWS
 #define TILE_DIM 32
 #define BLOCK_ROWS 4
 #define DEPTH 2
@@ -33,12 +35,7 @@ void ising(int *G, double *w, int k, int n)
 
 	//! Blocks & Threads
 	dim3 threads( TILE_DIM, BLOCK_ROWS );
-	dim3 blocks( (n+threads.x-1)/threads.x, (n+threads.x-1)/threads.x );
-
-	// printf("            blocks: %d\n", blocks.x*blocks.y);
-	// printf(" threads per block: %d\n", threads.x*threads.y);
-	// printf("moments per thread: %d\n", threads.x/threads.y);
-	// printf("  threads in total: %d\n", blocks.x*blocks.y*threads.x*threads.y);
+	dim3 blocks( n/threads.x, n/threads.x );
 
 	//! Implement the process for k iterations
 	for(int i = 0; i < k; i++)
@@ -105,7 +102,7 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
 			//Every thread read its own element in shared memory
 			sh_G[sh_row*sh_cols+sh_col] = gpu_G[((i + n)%n)*n + ( (j + n)%n )];
 
-			//! Add neighbors if the examined moment is not at a corner
+			//! Add left and right neighbors
 			if(threadIdx.x < DEPTH)
 			{
 				neigh_row = sh_row;
@@ -120,7 +117,7 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
 				}
 			}
 
-			//! Add neighbors if the examined moment is not at a corner
+			//! Add top and bottom neighbors
 			if(threadIdx.y < DEPTH)
 			{
 				neigh_col = sh_col;
@@ -135,31 +132,24 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
 				}
 			}
 
+			//! Add corner neighbors
 			if( (threadIdx.x < DEPTH) && (threadIdx.y<DEPTH) )
 			{
-				//1st corner (4 spots up and left)
-				int sharedDiagAccessorX= (sh_row -DEPTH)*sh_cols +(sh_col-DEPTH);
-				int GDiagAccessorX=( ( (i-DEPTH)  + n) % n)*n+( ( (j-DEPTH)  + n) % n);
-				sh_G[sharedDiagAccessorX]=gpu_G[GDiagAccessorX];
+				for(int p=0; p<4; p++)
+				{
+					int adder_row = (p%2 - 1)*DEPTH + (p%2)*blockDim.y;
+					neigh_row = sh_row + adder_row;
+					idx_row = (i + adder_row + n)%n;
 
-				//2nd diagonial (4 spots down and left)
-				sharedDiagAccessorX= (sh_row+blockDim.y)*sh_cols +(sh_col-DEPTH);
-				GDiagAccessorX=( ( (i+blockDim.y)  + n) % n)*n+( ( (j-DEPTH)  + n) % n);
-				sh_G[sharedDiagAccessorX]=gpu_G[GDiagAccessorX];
+					int adder_col = ((p+3)%(p+1)/2 - 1)*DEPTH + ((p+3)%(p+1)/2)*blockDim.x;
+					neigh_col = sh_col + adder_col;
+					idx_col = (j + adder_col + n)%n;
 
-				//3rd corner (4 spots down and right)
-				sharedDiagAccessorX= (sh_row+blockDim.y)*sh_cols +(sh_col+blockDim.x);
-				GDiagAccessorX=( ( (i+blockDim.y)  + n) % n)*n+( ( (j+blockDim.x)  + n) % n);
-				sh_G[sharedDiagAccessorX]=gpu_G[GDiagAccessorX];
-
-				//4rd diagonial (4 spots up and right)
-				sharedDiagAccessorX= (sh_row -DEPTH)*sh_cols+(sh_col+blockDim.x);
-				GDiagAccessorX=( ( (i-DEPTH)  + n) % n)*n+( ( (j+blockDim.x)  + n) % n);
-				sh_G[sharedDiagAccessorX]=gpu_G[GDiagAccessorX];
+					sh_G[neigh_row*sh_cols + neigh_col] = gpu_G[idx_row*n + idx_col];
+				}
 			}
 
-			//Here we synchronize the block threads in order Shared G values are
-			//updated for each thread
+			//! Synchronize to make sure all threads have added what they were supposed to
 			__syncthreads();
 
 			if((i<n)&&(j<n))
@@ -168,15 +158,15 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
 				double sum_value = 0;
 
 				//! Iterate through the moment's neighbors (k->X, l->Y axis)
-				for(int k=sh_row-2; k<sh_row+3; k++)
-			      	for(int l=sh_col-2; l<sh_col+3; l++)
+				for(int k=-2; k<3; k++)
+			      	for(int l=-2; l<3; l++)
 			        {
 			            //! Only edit the neighbors of the examined element
-			            if((k == sh_row) && (l == sh_col))
+			            if((k == 0) && (l == 0))
 			                continue;
 
 			            //! Calculate the new value
-			            sum_value += sh_w[(2+k-sh_row)*5 + (2+l-sh_col)] * sh_G[k*sh_cols + l];
+			            sum_value += sh_w[(2+k)*5 + (2+l)] * sh_G[(k+sh_row)*sh_cols + (l+sh_col)];
 			        }
 
 				//! If positive -> 1
@@ -189,6 +179,7 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
 					gpu_G_new[i*n + j] = sh_G[sh_row*sh_cols + sh_col];
 			}
 
+			//! Synchronize to make sure no thread adds next iteration's values
 			__syncthreads();
 		}
 	}

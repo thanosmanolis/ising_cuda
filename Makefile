@@ -31,24 +31,24 @@ RM = rm -rf
 all: $(EXECS)
 
 sequential:
-	cd ising; make lib; cd ..
-	cd ising; cp lib/*.a inc/*.h ../; cd ..
-	$(CC) main.c ising_sequential.a -o $@ $(CFLAGS)
+	cd ising; make lib_seq; cd ..
+	cd ising; cp lib/lib_seq.a inc/ising.h ../; cd ..
+	$(CC) main.c lib_seq.a -o $@ $(CFLAGS)
 
 v1:
-	cd ising; make lib; cd ..
-	cd ising; cp lib/*.a inc/*.h ../; cd ..
-	$(NVCC) main_cuda.cu ising_v1.a -o $@ $(CUDAFLAGS)
+	cd ising; make lib_v1; cd ..
+	cd ising; cp lib/lib_v1.a inc/*.h ../; cd ..
+	$(NVCC) main_cuda.cu lib_v1.a -o $@ $(CUDAFLAGS)
 
 v2:
-	cd ising; make lib; cd ..
-	cd ising; cp lib/*.a inc/*.h ../; cd ..
-	$(NVCC) main_cuda.cu ising_v2.a -o $@ $(CUDAFLAGS)
+	cd ising; make lib_v2; cd ..
+	cd ising; cp lib/lib_v2.a inc/*.h ../; cd ..
+	$(NVCC) main_cuda.cu lib_v2.a -o $@ $(CUDAFLAGS)
 
 v3:
-	cd ising; make lib; cd ..
-	cd ising; cp lib/*.a inc/*.h ../; cd ..
-	$(NVCC) main_cuda.cu ising_v3.a -o $@ $(CUDAFLAGS)
+	cd ising; make lib_v3; cd ..
+	cd ising; cp lib/lib_v3.a inc/*.h ../; cd ..
+	$(NVCC) main_cuda.cu lib_v3.a -o $@ $(CUDAFLAGS)
 
 clean:
 	$(RM) *.h *.a ising/src/*.o ising/lib/*.a $(EXECS)
