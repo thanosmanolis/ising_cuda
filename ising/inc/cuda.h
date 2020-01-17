@@ -25,6 +25,6 @@
 ************************************************************************************
 */
 
-__global__ void kernel(int n, double* gpu_w, int* gpu_G, int* gpu_G_new);
+__global__ void kernel(int n, double* gpu_w, int* gpu_G, int* gpu_G_new, int* flag_changes_made);
 
 #endif

@@ -20,9 +20,14 @@ void ising(int *G, double *w, int k, int n)
 	//! The indices of the examined neighbors
 	int idx_row, idx_col;
 
+	//! Flag to see if changes were made
+	int changes_made;
+
 	//! Implement the process for k iterations
 	for(int i = 0; i < k; i++)
 	{
+		changes_made = 0;
+
 		//! Access every single moment of the matrix
 		for(int i=0; i<n; i++)
 			for(int j=0; j<n; j++)
@@ -50,9 +55,15 @@ void ising(int *G, double *w, int k, int n)
 				//! If positive -> 1
 				//! If negative -> -1
 				if(sum_value > 1e-3)
+				{
 					G_new[i*n + j] = 1;
+					changes_made = 1;
+				}
 				else if(sum_value < -1e-3)
+				{
 					G_new[i*n + j] = -1;
+					changes_made = 1;
+				}
 				else
 					G_new[i*n + j] = G[i*n + j];
 			}
@@ -61,6 +72,13 @@ void ising(int *G, double *w, int k, int n)
 		temp = G;
 		G = G_new;
 		G_new = temp;
+
+		//! Terminate if no changes were made
+		if(!changes_made)
+		{
+			k = i+1;
+			break;
+		}
 	}
 
 	//! At the last iteration, if the k is odd,

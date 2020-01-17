@@ -37,10 +37,19 @@ void ising(int *G, double *w, int k, int n)
 	dim3 threads( TILE_DIM, BLOCK_ROWS );
 	dim3 blocks( n/threads.x, n/threads.x );
 
+	//! Flag to see if changes were made (also store it to gpu to pass it to the kernel)
+	int changes_made;
+	int *gpu_changes_made;
+	cudaMalloc(&gpu_changes_made, (size_t)sizeof(int));
+
 	//! Implement the process for k iterations
 	for(int i = 0; i < k; i++)
 	{
-        kernel<<< blocks , threads >>>(n, gpu_w, gpu_G, gpu_G_new);
+		//! Initialize changes_made as zero
+		changes_made = 0;
+		cudaMemcpy(gpu_changes_made, &changes_made, (size_t)sizeof(int), cudaMemcpyHostToDevice);
+
+        kernel<<< blocks , threads >>>(n, gpu_w, gpu_G, gpu_G_new, gpu_changes_made);
 
         //! Synchronize threads before swapping pointers
 		cudaDeviceSynchronize();
@@ -49,6 +58,11 @@ void ising(int *G, double *w, int k, int n)
 		temp = gpu_G;
 		gpu_G = gpu_G_new;
 		gpu_G_new = temp;
+
+		//! Terminate if no changes were made
+		cudaMemcpy(&changes_made, gpu_changes_made,  (size_t)sizeof(int), cudaMemcpyDeviceToHost);
+		if(changes_made == 0)
+			break;
 	}
 
     //! Copy GPU final data to CPU memory
@@ -60,7 +74,7 @@ void ising(int *G, double *w, int k, int n)
 	cudaFree(gpu_G_new);
 }
 
-__global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
+__global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new, int* flag_changes_made)
 {
 	//! Array in shared memory to store the examined moments
 	//! (with their neighbors), every each iteration (part of gpu_G)
@@ -172,9 +186,15 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new)
 				//! If positive -> 1
 				//! If negative -> -1
 				if(sum_value > 1e-3)
+				{
 					gpu_G_new[i*n + j] = 1;
+					*flag_changes_made = 1;
+				}
 				else if(sum_value < -1e-3)
+				{
 					gpu_G_new[i*n + j] = -1;
+					*flag_changes_made = 1;
+				}
 				else
 					gpu_G_new[i*n + j] = sh_G[sh_row*sh_cols + sh_col];
 			}
