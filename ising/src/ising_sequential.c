@@ -24,7 +24,7 @@ void ising(int *G, double *w, int k, int n)
 	int changes_made;
 
 	//! Implement the process for k iterations
-	for(int i = 0; i < k; i++)
+	for(int iter=0; iter<k; iter++)
 	{
 		changes_made = 0;
 
@@ -34,22 +34,22 @@ void ising(int *G, double *w, int k, int n)
 			{
 				sum_value = 0;
 
-				//! Iterate through the moment's neighbors (k->row, l->column)
-				for(int k=-2; k<3; k++)
+				//! Iterate through the moment's neighbors (m->row, l->column)
+				for(int m=-2; m<3; m++)
 					for(int l=-2; l<3; l++)
 					{
 						//! Only edit the neighbors of the examined element
-						if((k == 0) && (l == 0))
+						if((m == 0) && (l == 0))
 							continue;
 
 						//! Find the index of the examined neigbor
 			            //! If the element is at a special position (i.e. a corner)
 			            //! continue to the other side of the matrix
-						idx_row = (i + k + n) % n;
+						idx_row = (i + m + n) % n;
 			            idx_col = (j + l + n) % n;
 
 						//! Calculate the new value
-						sum_value += w[(2+k)*5 + (2+l)] * G[idx_row*n + idx_col];
+						sum_value += w[(2+m)*5 + (2+l)] * G[idx_row*n + idx_col];
 					}
 
 				//! If positive -> 1
@@ -76,7 +76,7 @@ void ising(int *G, double *w, int k, int n)
 		//! Terminate if no changes were made
 		if(!changes_made)
 		{
-			k = i+1;
+			k = iter+1;
 			break;
 		}
 	}

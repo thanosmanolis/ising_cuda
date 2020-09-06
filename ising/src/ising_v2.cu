@@ -98,22 +98,22 @@ __global__ void kernel(int n, double* gpu_w, int* gpu_G, int* gpu_G_new, int* fl
 
 		sum_value = 0;
 
-		//! Iterate through the moment's neighbors (k->X, l->Y axis)
-		for(int k=-2; k<3; k++)
+		//! Iterate through the moment's neighbors (m->X, l->Y axis)
+		for(int m=-2; m<3; m++)
 			for(int l=-2; l<3; l++)
 			{
 				//! Only edit the neighbors of the examined element
-				if((k == 0) && (l == 0))
+				if((m == 0) && (l == 0))
 					continue;
 
 				//! Find the index of the examined neigbor
 	            //! If the element is at a special position (i.e. a corner)
 	            //! continue to the other side of the matrix
-				idx_row = (mom_row + k + n) % n;
+				idx_row = (mom_row + m + n) % n;
 	            idx_col = (mom_col + l + n) % n;
 
 				//! Calculate the new value
-				sum_value += gpu_w[(2+k)*5 + (2+l)] * gpu_G[idx_row*n + idx_col];
+				sum_value += gpu_w[(2+m)*5 + (2+l)] * gpu_G[idx_row*n + idx_col];
 			}
 
 	    //! If positive -> 1

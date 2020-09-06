@@ -108,12 +108,12 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new, int* f
 	//! Coordinates of the neighbors in shared array
 	int neigh_row, neigh_col;
 
-	//Accessing the spins in the global lattice and "transfer" them in the shared matrix.
+	//! Accessing the spins in the global lattice and "transfer" them in the shared matrix.
 	for(int i=mom_row; i<n+DEPTH ;i+=stepRow)
 	{
 		for(int j=mom_col; j<n+DEPTH;j+=stepCol)
 		{
-			//Every thread read its own element in shared memory
+			//! Every thread read its own element in shared memory
 			sh_G[sh_row*sh_cols+sh_col] = gpu_G[((i + n)%n)*n + ( (j + n)%n )];
 
 			//! Add left and right neighbors
@@ -171,16 +171,16 @@ __global__ void kernel(int n,  double* gpu_w, int* gpu_G, int* gpu_G_new, int* f
 				//! Variable to store the value of each moment
 				double sum_value = 0;
 
-				//! Iterate through the moment's neighbors (k->X, l->Y axis)
-				for(int k=-2; k<3; k++)
+				//! Iterate through the moment's neighbors (m->X, l->Y axis)
+				for(int m=-2; m<3; m++)
 			      	for(int l=-2; l<3; l++)
 			        {
 			            //! Only edit the neighbors of the examined element
-			            if((k == 0) && (l == 0))
+			            if((m == 0) && (l == 0))
 			                continue;
 
 			            //! Calculate the new value
-			            sum_value += sh_w[(2+k)*5 + (2+l)] * sh_G[(k+sh_row)*sh_cols + (l+sh_col)];
+			            sum_value += sh_w[(2+m)*5 + (2+l)] * sh_G[(m+sh_row)*sh_cols + (l+sh_col)];
 			        }
 
 				//! If positive -> 1
