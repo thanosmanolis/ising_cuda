@@ -121,12 +121,14 @@ __global__ void kernel(int n, double* gpu_w, int* gpu_G, int* gpu_G_new, int* fl
 	    if(sum_value > 1e-3)
 		{
 	        gpu_G_new[mom_row*n + mom_col] = 1;
-			*flag_changes_made = 1;
+			if(gpu_G[mom_row*n + mom_col] == -1)
+				*flag_changes_made = 1;
 		}
 		else if(sum_value < -1e-3)
 		{
 		    gpu_G_new[mom_row*n + mom_col] = -1;
-			*flag_changes_made = 1;
+			if(gpu_G[mom_row*n + mom_col] == -1)
+				*flag_changes_made = 1;
 		}
 		else
 	        gpu_G_new[mom_row*n + mom_col] = gpu_G[mom_row*n + mom_col];

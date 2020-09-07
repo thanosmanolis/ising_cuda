@@ -57,12 +57,14 @@ void ising(int *G, double *w, int k, int n)
 				if(sum_value > 1e-3)
 				{
 					G_new[i*n + j] = 1;
-					changes_made = 1;
+					if(G[i*n + j] == -1)	
+						changes_made = 1;
 				}
 				else if(sum_value < -1e-3)
 				{
 					G_new[i*n + j] = -1;
-					changes_made = 1;
+					if(G[i*n + j] == 1)	
+						changes_made = 1;
 				}
 				else
 					G_new[i*n + j] = G[i*n + j];
